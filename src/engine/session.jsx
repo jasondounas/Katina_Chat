@@ -56,6 +56,7 @@ export function SessionProvider({ children, liveTableId = null }) {
   const everReadyRef = useRef(new Set());
   const currentOrderIdsRef = useRef(new Set());
   const [live, setLive] = useState({ menuLoaded: false, sessionId: null });
+  const storageKey = liveTableId ? `katinabot-live-${liveTableId}` : null;
 
   useEffect(() => {
     if (!liveTableId) return undefined;
@@ -74,11 +75,43 @@ export function SessionProvider({ children, liveTableId = null }) {
         if (cancelled || !res.active) return;
         sessionIdRef.current = res.session_id;
         setLive((l) => ({ ...l, sessionId: res.session_id }));
+
+        // Restore this browser's own view of the chat, but only if it's the
+        // exact same sitting — a new session at this table (e.g. the last
+        // bill got paid and a new party sat down) must always start fresh.
+        try {
+          const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+          if (saved && saved.sessionId === res.session_id) {
+            dispatch({ type: 'RESET', state: saved.state });
+            currentOrderIdsRef.current = new Set(saved.currentOrderIds || []);
+            everReadyRef.current = new Set(saved.everReady || []);
+          } else {
+            localStorage.removeItem(storageKey);
+          }
+        } catch {
+          localStorage.removeItem(storageKey);
+        }
       })
       .catch(() => {});
 
     return () => { cancelled = true; };
   }, [liveTableId]);
+
+  // Save this browser's own view of the conversation on every change, so a
+  // refresh doesn't lose it — scoped to this exact table + session.
+  useEffect(() => {
+    if (!liveTableId || !live.sessionId) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({
+        sessionId: live.sessionId,
+        state,
+        currentOrderIds: [...currentOrderIdsRef.current],
+        everReady: [...everReadyRef.current],
+      }));
+    } catch {
+      // storage full or disabled — non-critical, the app still works.
+    }
+  }, [state, live.sessionId, liveTableId]);
 
   // Poll the real order while one is in flight, and translate its status
   // into the same four stages the demo already knows how to render.
