@@ -14,12 +14,18 @@ import {
  * order_id that was ever seen with `ready: true`, and only call something
  * "served" once every approved item has gone through that ready → picked-up
  * cycle. `everReady` is a Set the caller keeps across polls.
+ *
+ * `relevantIds` scopes everything to only the orders THIS chat exchange
+ * actually created — a table's session can accumulate many orders across
+ * a whole meal, and older leftover ones (still pending, or long since
+ * served) must never affect what this specific round shows the guest.
  */
-function computeOrderStage(orders, everReady) {
-  if (!orders.length) return null;
-  if (orders.some((o) => o.status === 'PENDING_REVIEW')) return 'received';
+function computeOrderStage(orders, everReady, relevantIds) {
+  const relevant = orders.filter((o) => relevantIds.has(o.order_id));
+  if (!relevant.length) return null;
+  if (relevant.some((o) => o.status === 'PENDING_REVIEW')) return 'received';
 
-  const approved = orders.filter((o) => o.status === 'APPROVED');
+  const approved = relevant.filter((o) => o.status === 'APPROVED');
   if (!approved.length) return null;
 
   approved.forEach((o) => { if (o.ready) everReady.add(o.order_id); });
@@ -48,6 +54,7 @@ export function SessionProvider({ children, liveTableId = null }) {
   // --- live mode: real menu + real session on the real backend ---
   const sessionIdRef = useRef(null);
   const everReadyRef = useRef(new Set());
+  const currentOrderIdsRef = useRef(new Set());
   const [live, setLive] = useState({ menuLoaded: false, sessionId: null });
 
   useEffect(() => {
@@ -80,7 +87,7 @@ export function SessionProvider({ children, liveTableId = null }) {
     const id = setInterval(() => {
       fetchSessionOrders(live.sessionId)
         .then((orders) => {
-          const stage = computeOrderStage(orders, everReadyRef.current);
+          const stage = computeOrderStage(orders, everReadyRef.current, currentOrderIdsRef.current);
           if (stage && stage !== ref.current.order.stage) {
             dispatch({ type: 'ADVANCE_ORDER', stage });
           }
@@ -180,10 +187,15 @@ export function SessionProvider({ children, liveTableId = null }) {
 
       if (sessionIdRef.current && draft) {
         everReadyRef.current.clear();
+        currentOrderIdsRef.current = new Set();
         // Real order → real backend. The poller above picks up its real
-        // status (pending review → approved → ready → picked up) from here.
+        // status (pending review → approved → ready → picked up) from here,
+        // scoped to only the order_ids this round actually created — not
+        // every order this table has ever placed.
         draft.items.forEach((line) => {
-          submitOrder(sessionIdRef.current, line.itemId, line.qty).catch(() => {});
+          submitOrder(sessionIdRef.current, line.itemId, line.qty)
+            .then((res) => { if (res && res.order_id) currentOrderIdsRef.current.add(res.order_id); })
+            .catch(() => {});
         });
       } else {
         // Demo mode, no real session — fake the kitchen picking it up.
