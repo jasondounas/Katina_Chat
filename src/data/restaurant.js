@@ -350,7 +350,11 @@ export function applyLiveMenu(backendMenu) {
   menu.length = 0;
   menu.push(...items);
 
-  const known = new Set(categories.map((c) => c.id));
+  // Live mode must never mix in the demo's fictional categories (starters,
+  // mains, κρασί/wine, etc.) — clear them first so only categories that
+  // actually exist on your real menu items show up.
+  categories.length = 0;
+  const known = new Set();
   items.forEach((item) => {
     if (!known.has(item.category)) {
       known.add(item.category);
