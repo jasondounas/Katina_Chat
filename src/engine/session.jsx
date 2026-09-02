@@ -8,14 +8,25 @@ import {
   fetchMenu, fetchActiveSession, fetchSessionOrders, submitOrder, callWaiter, requestPayment,
 } from '../lib/api.js';
 
-/** Turns the real backend's per-order statuses into the demo's four stages. */
-function computeOrderStage(orders) {
+/**
+ * The backend's `ready` flag alone can't tell "not cooked yet" apart from
+ * "already picked up" — both look like `ready: false`. So we remember every
+ * order_id that was ever seen with `ready: true`, and only call something
+ * "served" once every approved item has gone through that ready → picked-up
+ * cycle. `everReady` is a Set the caller keeps across polls.
+ */
+function computeOrderStage(orders, everReady) {
   if (!orders.length) return null;
   if (orders.some((o) => o.status === 'PENDING_REVIEW')) return 'received';
+
   const approved = orders.filter((o) => o.status === 'APPROVED');
-  if (approved.some((o) => !o.ready)) return 'preparing';
+  if (!approved.length) return null;
+
+  approved.forEach((o) => { if (o.ready) everReady.add(o.order_id); });
+
   if (approved.some((o) => o.ready)) return 'ready';
-  return approved.length ? 'served' : null;
+  if (approved.every((o) => everReady.has(o.order_id))) return 'served';
+  return 'preparing';
 }
 
 const SessionContext = createContext(null);
@@ -36,6 +47,7 @@ export function SessionProvider({ children, liveTableId = null }) {
 
   // --- live mode: real menu + real session on the real backend ---
   const sessionIdRef = useRef(null);
+  const everReadyRef = useRef(new Set());
   const [live, setLive] = useState({ menuLoaded: false, sessionId: null });
 
   useEffect(() => {
@@ -68,7 +80,7 @@ export function SessionProvider({ children, liveTableId = null }) {
     const id = setInterval(() => {
       fetchSessionOrders(live.sessionId)
         .then((orders) => {
-          const stage = computeOrderStage(orders);
+          const stage = computeOrderStage(orders, everReadyRef.current);
           if (stage && stage !== ref.current.order.stage) {
             dispatch({ type: 'ADVANCE_ORDER', stage });
           }
@@ -167,6 +179,7 @@ export function SessionProvider({ children, liveTableId = null }) {
       say('Τέλεια — το έστειλα στην κουζίνα.', [{ type: 'order-status' }], 500);
 
       if (sessionIdRef.current && draft) {
+        everReadyRef.current.clear();
         // Real order → real backend. The poller above picks up its real
         // status (pending review → approved → ready → picked up) from here.
         draft.items.forEach((line) => {
