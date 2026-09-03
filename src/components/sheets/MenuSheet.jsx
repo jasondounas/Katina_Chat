@@ -26,17 +26,25 @@ export function CategorySheet({ payload }) {
 
 /** Ένα πιάτο, αναλυτικά — το μόνο σημείο όπου το πιάτο δείχνεται μεγάλο. */
 export function ItemSheet({ payload }) {
-  const { api } = useSession();
+  const { state, api } = useSession();
   const item = getItem(payload.itemId);
-  const [qty, setQty] = useState(1);
   const [mods, setMods] = useState([]);
 
   const available = item.available;
-  const extra = mods.reduce((s, m) => s + modDefs[m].priceDelta, 0);
-  const total = (item.price + extra) * qty;
+  const draft = state.basketId ? state.drafts[state.basketId] : null;
+  const myQty = draft?.items.find((l) => l.itemId === item.id)?.qty || 0;
 
-  const add = () => {
-    api.addItem(item.id, qty);
+  // Same running total everywhere (menu card, this sheet, the sticky bar) —
+  // the whole basket, not just this one item.
+  const basketLines = (draft?.items ?? []).map((l) => ({ ...l, item: getItem(l.itemId) }));
+  const basketTotal = basketLines.reduce((sum, l) => sum + l.item.price * l.qty, 0);
+  const hasBasket = basketLines.length > 0;
+
+  const inc = () => api.addItem(item.id, 1);
+  const dec = () => { if (state.basketId) api.draftQty(state.basketId, item.id, -1); };
+
+  const confirmOrder = () => {
+    api.confirmDraft(state.basketId);
     api.closeSheet();
   };
 
@@ -48,11 +56,17 @@ export function ItemSheet({ payload }) {
         available ? (
           <>
             <span className="qty" style={{ margin: 0 }}>
-              <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Λιγότερα"><Minus width={13} height={13} /></button>
-              <span>{qty}</span>
-              <button onClick={() => setQty((q) => Math.min(9, q + 1))} aria-label="Περισσότερα"><Plus width={13} height={13} /></button>
+              <button onClick={dec} aria-label="Λιγότερα" disabled={myQty === 0}>
+                <Minus width={13} height={13} />
+              </button>
+              <span>{myQty}</span>
+              <button onClick={inc} aria-label="Περισσότερα">
+                <Plus width={13} height={13} />
+              </button>
             </span>
-            <button className="btn btn--primary" onClick={add}>Προσθήκη · {money(total)}</button>
+            <button className="btn btn--primary" onClick={confirmOrder} disabled={!hasBasket}>
+              Επιβεβαίωση Παραγγελίας · {money(basketTotal)}
+            </button>
           </>
         ) : (
           <button className="btn" disabled>{item.unavailableNote}</button>

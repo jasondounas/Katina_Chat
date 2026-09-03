@@ -1,20 +1,21 @@
-import { useState } from 'react';
 import Plate, { DishPhoto } from '../Plate.jsx';
 import TagList from './TagList.jsx';
 import { money } from '../../data/restaurant.js';
 import { useSession } from '../../engine/session.jsx';
-import { Plus, Check } from '../Icons.jsx';
+import { Plus, Minus } from '../Icons.jsx';
 
 export default function MenuItemCard({ item }) {
-  const { api } = useSession();
-  const [added, setAdded] = useState(false);
+  const { state, api } = useSession();
+  const draft = state.basketId ? state.drafts[state.basketId] : null;
+  const qty = draft?.items.find((l) => l.itemId === item.id)?.qty || 0;
 
-  const add = (e) => {
+  const inc = (e) => {
     e.stopPropagation();
-    if (!item.available || added) return;
-    setAdded(true);
-    api.addItem(item.id, 1);
-    setTimeout(() => setAdded(false), 1600);
+    if (item.available) api.addItem(item.id, 1);
+  };
+  const dec = (e) => {
+    e.stopPropagation();
+    if (state.basketId) api.draftQty(state.basketId, item.id, -1);
   };
 
   return (
@@ -40,13 +41,21 @@ export default function MenuItemCard({ item }) {
       <div className="dish__foot">
         <span className="price dish__price">{money(item.price)}</span>
         {item.available && (
-          <button
-            className={`add ${added ? 'add--done' : ''}`}
-            onClick={add}
-            aria-label={added ? `${item.name} — προστέθηκε` : `Προσθήκη: ${item.name}`}
-          >
-            {added ? <Check width={13} height={13} /> : <Plus width={14} height={14} />}
-          </button>
+          qty > 0 ? (
+            <span className="qty">
+              <button onClick={dec} aria-label={`Ένα λιγότερο: ${item.name}`}>
+                <Minus width={12} height={12} />
+              </button>
+              <span>{qty}</span>
+              <button onClick={inc} aria-label={`Ένα ακόμα: ${item.name}`}>
+                <Plus width={12} height={12} />
+              </button>
+            </span>
+          ) : (
+            <button className="add" onClick={inc} aria-label={`Προσθήκη: ${item.name}`}>
+              <Plus width={14} height={14} />
+            </button>
+          )
         )}
       </div>
     </article>

@@ -24,6 +24,7 @@ export const initialState = {
   phase: 'seated', // seated → ordered → dining → paid → closed
   messages: [],
   drafts: {}, // id -> { items:[{itemId,qty}], status }
+  basketId: null, // which draft (if any) is the currently-open basket
   order: { number: 124, items: [], stage: null, placedAt: null, etaMin: null },
   services: [], // { id, itemId, label, at, status }
   waiter: null, // { id, reasonId, reasonLabel, staffId, at, status }
@@ -119,6 +120,7 @@ export function reducer(state, action) {
       return {
         ...state,
         drafts: { ...state.drafts, [id]: { id, items: action.items, status: 'pending' } },
+        basketId: id,
       };
     }
 
@@ -144,6 +146,7 @@ export function reducer(state, action) {
         return {
           ...state,
           drafts: { ...state.drafts, [action.id]: { ...draft, items, status: 'cancelled' } },
+          basketId: state.basketId === action.id ? null : state.basketId,
         };
       }
       return { ...state, drafts: { ...state.drafts, [action.id]: { ...draft, items } } };
@@ -152,7 +155,11 @@ export function reducer(state, action) {
     case 'CANCEL_DRAFT': {
       const draft = state.drafts[action.id];
       if (!draft) return state;
-      return { ...state, drafts: { ...state.drafts, [action.id]: { ...draft, status: 'cancelled' } } };
+      return {
+        ...state,
+        drafts: { ...state.drafts, [action.id]: { ...draft, status: 'cancelled' } },
+        basketId: state.basketId === action.id ? null : state.basketId,
+      };
     }
 
     case 'CONFIRM_DRAFT': {
@@ -163,6 +170,7 @@ export function reducer(state, action) {
       return withPhase({
         ...state,
         drafts: { ...state.drafts, [action.id]: { ...draft, status: 'confirmed' } },
+        basketId: state.basketId === action.id ? null : state.basketId,
         order: {
           ...state.order,
           items,
