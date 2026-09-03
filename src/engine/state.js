@@ -122,6 +122,18 @@ export function reducer(state, action) {
       };
     }
 
+    /** Tapping + on the menu while a basket is already open — adds to the
+     * same draft instead of spawning a brand new one/chat message. */
+    case 'ADD_TO_DRAFT': {
+      const draft = state.drafts[action.id];
+      if (!draft || draft.status !== 'pending') return state;
+      const exists = draft.items.some((l) => l.itemId === action.itemId);
+      const items = exists
+        ? draft.items.map((l) => (l.itemId === action.itemId ? { ...l, qty: l.qty + (action.qty ?? 1) } : l))
+        : [...draft.items, { itemId: action.itemId, qty: action.qty ?? 1 }];
+      return { ...state, drafts: { ...state.drafts, [action.id]: { ...draft, items } } };
+    }
+
     case 'DRAFT_QTY': {
       const draft = state.drafts[action.id];
       if (!draft) return state;

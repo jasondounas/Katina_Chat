@@ -55,6 +55,7 @@ export function SessionProvider({ children, liveTableId = null }) {
   const sessionIdRef = useRef(null);
   const everReadyRef = useRef(new Set());
   const currentOrderIdsRef = useRef(new Set());
+  const openBasketIdRef = useRef(null);
   const [live, setLive] = useState({ menuLoaded: false, sessionId: null });
   const storageKey = liveTableId ? `katinabot-live-${liveTableId}` : null;
 
@@ -184,17 +185,30 @@ export function SessionProvider({ children, liveTableId = null }) {
     openSheet: (type, payload) => dispatch({ type: 'OPEN_SHEET', sheet: type, payload }),
     closeSheet: () => dispatch({ type: 'CLOSE_SHEET' }),
 
-    /** Add straight from a menu card — no round trip through the thread. */
+    /** Add straight from a menu card — no round trip through the thread.
+     * Repeat taps (same item or a different one) land in the SAME open
+     * basket instead of spawning a new draft and a new chat message each
+     * time, matching how customer.html's basket already behaves. */
     addItem: (itemId, qty = 1) => {
+      const openId = openBasketIdRef.current;
+      const openDraft = openId ? ref.current.drafts[openId] : null;
+
+      if (openDraft && openDraft.status === 'pending') {
+        dispatch({ type: 'ADD_TO_DRAFT', id: openId, itemId, qty });
+        dispatch({ type: 'TICK', minutes: 1 });
+        return;
+      }
+
       const id = `d-${Date.now()}`;
+      openBasketIdRef.current = id;
       dispatch({ type: 'CREATE_DRAFT', id, items: [{ itemId, qty }] });
       dispatch({ type: 'TICK', minutes: 1 });
-      const item = getItem(itemId);
-      say(`${item.name} — προστέθηκε. Μόλις επιβεβαιώσετε, πάει κατευθείαν ${item.category === 'wine' || item.category === 'cocktails' ? 'στο μπαρ' : 'στην κουζίνα'}.`, [{ type: 'draft', id }], 420);
+      say('Ξεκίνησα το καλάθι σας — προσθέστε ό,τι άλλο θέλετε, μετά επιβεβαιώστε.', [{ type: 'draft', id }], 420);
     },
 
     draftFromItems: (items) => {
       const id = `d-${Date.now()}`;
+      openBasketIdRef.current = id;
       dispatch({ type: 'CREATE_DRAFT', id, items });
       say('Ορίστε το τραπέζι όπως το έχω. Τίποτα δεν φεύγει για την κουζίνα πριν το επιβεβαιώσετε.', [{ type: 'draft', id }], 420);
     },
@@ -203,6 +217,7 @@ export function SessionProvider({ children, liveTableId = null }) {
 
     cancelDraft: (id) => {
       dispatch({ type: 'CANCEL_DRAFT', id });
+      if (openBasketIdRef.current === id) openBasketIdRef.current = null;
       say('Καθαρίστηκε. Τι άλλο να σας φέρω;', [{
         type: 'actions',
         options: [
@@ -215,6 +230,7 @@ export function SessionProvider({ children, liveTableId = null }) {
     confirmDraft: (id) => {
       const draft = ref.current.drafts[id];
       dispatch({ type: 'CONFIRM_DRAFT', id });
+      if (openBasketIdRef.current === id) openBasketIdRef.current = null;
       dispatch({ type: 'TICK', minutes: 1 });
       say('Τέλεια — το έστειλα στην κουζίνα.', [{ type: 'order-status' }], 500);
 
