@@ -9,11 +9,30 @@ import { Plus, Minus } from '../Icons.jsx';
 
 /** Μια ολόκληρη κατηγορία, χωρίς να φύγετε από τη συνομιλία. */
 export function CategorySheet({ payload }) {
+  const { state, api } = useSession();
   const category = getCategory(payload.categoryId);
   const items = itemsIn(category.id);
 
+  const draft = state.basketId ? state.drafts[state.basketId] : null;
+  const basketLines = (draft?.items ?? []).map((l) => ({ ...l, item: getItem(l.itemId) }));
+  const basketTotal = basketLines.reduce((sum, l) => sum + l.item.price * l.qty, 0);
+  const hasBasket = basketLines.length > 0;
+
+  const confirmOrder = () => {
+    api.confirmDraft(state.basketId);
+    api.closeSheet();
+  };
+
   return (
-    <Sheet eyebrow={category.note} title={category.name}>
+    <Sheet
+      eyebrow={category.note}
+      title={category.name}
+      footer={hasBasket ? (
+        <button className="btn btn--primary" style={{ width: '100%' }} onClick={confirmOrder}>
+          Επιβεβαίωση Παραγγελίας · {money(basketTotal)}
+        </button>
+      ) : undefined}
+    >
       <div className="rows" style={{ padding: 0 }}>
         {items.map((item) => (
           <MenuItemRow key={item.id} item={item} />
