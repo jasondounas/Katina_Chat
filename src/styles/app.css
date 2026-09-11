@@ -1117,6 +1117,11 @@
   background: var(--surface, #fff);
   border: 1px solid var(--line);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  /* it's a <button> now — reset the defaults */
+  width: calc(100% - 44px);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
 }
 .basket-bar__info {
   display: flex;
@@ -1131,6 +1136,12 @@
 .basket-bar__total {
   font-size: 17px;
   font-weight: 800;
+}
+.basket-bar__cta {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
 }
 
 .chips {

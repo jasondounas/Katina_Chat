@@ -2,11 +2,10 @@ import { useSession } from '../engine/session.jsx';
 import { getItem, money } from '../data/restaurant.js';
 
 /**
- * Always-visible bar showing the currently open basket's count and running
- * total, with the ONE send-order button. This is the only place an order
- * actually gets sent — the browsing popups (category/item) only add and
- * remove quantities, so you can pick from several categories before
- * sending once, the same way customer.html's cart bar works.
+ * Always-visible bar showing the currently open basket's running total.
+ * Tapping it opens the full cart review (CartSheet) — it does NOT send
+ * anything itself. You can keep browsing and adding from any category
+ * while this bar just quietly keeps the total up to date.
  */
 export default function BasketBar() {
   const { state, api } = useSession();
@@ -20,14 +19,12 @@ export default function BasketBar() {
   const total = lines.reduce((sum, l) => sum + l.item.price * l.qty, 0);
 
   return (
-    <div className="basket-bar">
+    <button className="basket-bar" onClick={() => api.openSheet('cart')}>
       <div className="basket-bar__info">
         <span className="basket-bar__count">{count} {count === 1 ? 'προϊόν' : 'προϊόντα'}</span>
         <span className="price basket-bar__total">{money(total)}</span>
       </div>
-      <button className="btn btn--primary" onClick={() => api.confirmDraft(state.basketId)}>
-        Αποστολή Παραγγελίας
-      </button>
-    </div>
+      <span className="basket-bar__cta">Το καλάθι σας ›</span>
+    </button>
   );
 }
