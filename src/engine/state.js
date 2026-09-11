@@ -39,10 +39,12 @@ export const initialState = {
 /* ---------- selectors ---------- */
 
 export const billLines = (state) =>
-  state.order.items.map((line) => {
-    const item = getItem(line.itemId);
-    return { ...line, item, total: item.price * line.qty };
-  });
+  state.order.items
+    .map((line) => {
+      const item = getItem(line.itemId);
+      return item ? { ...line, item, total: item.price * line.qty } : null;
+    })
+    .filter(Boolean);
 
 export const subtotal = (state) =>
   billLines(state).reduce((sum, l) => sum + l.total, 0);

@@ -22,7 +22,9 @@ export default function OrderSummaryCard({ id }) {
   const draft = state.drafts[id];
   if (!draft) return null;
 
-  const lines = draft.items.map((l) => ({ ...l, item: getItem(l.itemId) }));
+  const lines = draft.items
+    .map((l) => ({ ...l, item: getItem(l.itemId) }))
+    .filter((l) => l.item);
   const total = lines.reduce((s, l) => s + l.item.price * l.qty, 0);
   const pending = draft.status === 'pending';
   const confirmed = draft.status === 'confirmed';
