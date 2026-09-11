@@ -1,5 +1,4 @@
-import { categories, getItem } from '../data/restaurant.js';
-import MenuCategoryCard from './menu/MenuCategoryCard.jsx';
+import { categories, itemsIn, getItem } from '../data/restaurant.js';
 import MenuItemCard from './menu/MenuItemCard.jsx';
 import MenuItemRow from './menu/MenuItemRow.jsx';
 import QuickActions from './QuickActions.jsx';
@@ -21,17 +20,29 @@ import InfoCard from './cards/InfoCard.jsx';
  * μόνο ένα id, ώστε μια κάρτα δέκα ατάκες πριν να λέει ακόμα την αλήθεια.
  */
 
-/** Τα full-bleed blocks διαχειρίζονται μόνα τους τα οριζόντια περιθώρια. */
-const BLEED = new Set(['categories', 'items']);
+/** Full-bleed blocks χειρίζονται μόνα τους τα οριζόντια περιθώρια. */
+const BLEED = new Set(['items']);
 
 export default function BlockRenderer({ block }) {
   switch (block.type) {
+    /** Ολόκληρος ο κατάλογος, μία φορά, χωρίς κατηγορία-κατηγορία άνοιγμα —
+     * ο επισκέπτης προσθέτει από οπουδήποτε στο ίδιο καλάθι χωρίς ποτέ να
+     * κλείσει κάτι για να αλλάξει κατηγορία. */
     case 'categories':
       return (
-        <div className="cats">
-          {categories.map((c, i) => (
-            <MenuCategoryCard key={c.id} category={c} wide={i === categories.length - 1} />
-          ))}
+        <div>
+          {categories.map((c) => {
+            const items = itemsIn(c.id);
+            if (!items.length) return null;
+            return (
+              <div key={c.id}>
+                <RowLabel>{c.name}</RowLabel>
+                <div className="rows">
+                  {items.map((item) => <MenuItemRow key={item.id} item={item} />)}
+                </div>
+              </div>
+            );
+          })}
         </div>
       );
 
