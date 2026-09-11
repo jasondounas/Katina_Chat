@@ -115,6 +115,13 @@ export default function OrderSummaryCard({ id }) {
             {state.order.stage === 'ready' && <span><b>Φεύγει από το πάσο</b></span>}
             {state.order.stage === 'served' && <span>Ολοκληρώθηκε</span>}
           </div>
+          <button
+            className="btn"
+            style={{ width: '100%', marginTop: 14 }}
+            onClick={() => api.send('Δείξε μου τον κατάλογο')}
+          >
+            + Νέα παραγγελία
+          </button>
         </div>
       )}
     </div>
