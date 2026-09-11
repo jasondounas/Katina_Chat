@@ -1105,6 +1105,34 @@
   background: linear-gradient(180deg, transparent, var(--screen) 22%);
 }
 
+.basket-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 22px 10px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+.basket-bar__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.basket-bar__count {
+  font-size: 12px;
+  color: var(--text-3);
+  font-weight: 600;
+}
+.basket-bar__total {
+  font-size: 17px;
+  font-weight: 800;
+}
+
 .chips {
   display: flex;
   gap: 7px;

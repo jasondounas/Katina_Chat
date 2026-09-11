@@ -2,6 +2,7 @@ import { SessionProvider, useSession } from './engine/session.jsx';
 import MobileShell from './components/MobileShell.jsx';
 import RestaurantHeader from './components/RestaurantHeader.jsx';
 import Conversation from './components/Conversation.jsx';
+import BasketBar from './components/BasketBar.jsx';
 import ChatComposer from './components/ChatComposer.jsx';
 import SheetHost from './components/SheetHost.jsx';
 import DemoScenarioSwitcher from './components/DemoScenarioSwitcher.jsx';
@@ -22,7 +23,7 @@ function LiveLoadingGate({ children }) {
 export default function App() {
   return (
     <SessionProvider liveTableId={liveTableId}>
-      <div className="stage">
+      <div className={liveTableId ? 'stage stage--live' : 'stage'}>
         {!liveTableId && <DemoScenarioSwitcher />}
 
         <main className="stage__main">
@@ -47,6 +48,7 @@ export default function App() {
               <div className="app">
                 <RestaurantHeader />
                 <Conversation />
+                <BasketBar />
                 <ChatComposer />
                 <SheetHost />
               </div>

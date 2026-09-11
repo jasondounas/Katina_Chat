@@ -7,32 +7,14 @@ import { useSession } from '../../engine/session.jsx';
 import { getCategory, itemsIn, getItem, money, modifiers as modDefs } from '../../data/restaurant.js';
 import { Plus, Minus } from '../Icons.jsx';
 
-/** Μια ολόκληρη κατηγορία, χωρίς να φύγετε από τη συνομιλία. */
+/** Μια ολόκληρη κατηγορία, χωρίς να φύγετε από τη συνομιλία. Καθαρά
+ * περιήγηση/προσθήκη — η αποστολή γίνεται μόνο από το μπαρ καλαθιού. */
 export function CategorySheet({ payload }) {
-  const { state, api } = useSession();
   const category = getCategory(payload.categoryId);
   const items = itemsIn(category.id);
 
-  const draft = state.basketId ? state.drafts[state.basketId] : null;
-  const basketLines = (draft?.items ?? []).map((l) => ({ ...l, item: getItem(l.itemId) }));
-  const basketTotal = basketLines.reduce((sum, l) => sum + l.item.price * l.qty, 0);
-  const hasBasket = basketLines.length > 0;
-
-  const confirmOrder = () => {
-    api.confirmDraft(state.basketId);
-    api.closeSheet();
-  };
-
   return (
-    <Sheet
-      eyebrow={category.note}
-      title={category.name}
-      footer={hasBasket ? (
-        <button className="btn btn--primary" style={{ width: '100%' }} onClick={confirmOrder}>
-          Επιβεβαίωση Παραγγελίας · {money(basketTotal)}
-        </button>
-      ) : undefined}
-    >
+    <Sheet eyebrow={category.note} title={category.name}>
       <div className="rows" style={{ padding: 0 }}>
         {items.map((item) => (
           <MenuItemRow key={item.id} item={item} />
@@ -43,7 +25,10 @@ export function CategorySheet({ payload }) {
   );
 }
 
-/** Ένα πιάτο, αναλυτικά — το μόνο σημείο όπου το πιάτο δείχνεται μεγάλο. */
+/** Ένα πιάτο, αναλυτικά — το μόνο σημείο όπου το πιάτο δείχνεται μεγάλο.
+ * Μόνο περιήγηση/προσθήκη εδώ επίσης — η αποστολή γίνεται από το μπαρ
+ * καλαθιού, ώστε να μπορείτε να προσθέσετε από πολλές κατηγορίες πριν
+ * στείλετε μία φορά. */
 export function ItemSheet({ payload }) {
   const { state, api } = useSession();
   const item = getItem(payload.itemId);
@@ -53,19 +38,8 @@ export function ItemSheet({ payload }) {
   const draft = state.basketId ? state.drafts[state.basketId] : null;
   const myQty = draft?.items.find((l) => l.itemId === item.id)?.qty || 0;
 
-  // Same running total everywhere (menu card, this sheet, the sticky bar) —
-  // the whole basket, not just this one item.
-  const basketLines = (draft?.items ?? []).map((l) => ({ ...l, item: getItem(l.itemId) }));
-  const basketTotal = basketLines.reduce((sum, l) => sum + l.item.price * l.qty, 0);
-  const hasBasket = basketLines.length > 0;
-
   const inc = () => api.addItem(item.id, 1);
   const dec = () => { if (state.basketId) api.draftQty(state.basketId, item.id, -1); };
-
-  const confirmOrder = () => {
-    api.confirmDraft(state.basketId);
-    api.closeSheet();
-  };
 
   return (
     <Sheet
@@ -73,20 +47,15 @@ export function ItemSheet({ payload }) {
       title={item.name}
       footer={
         available ? (
-          <>
-            <span className="qty" style={{ margin: 0 }}>
-              <button onClick={dec} aria-label="Λιγότερα" disabled={myQty === 0}>
-                <Minus width={13} height={13} />
-              </button>
-              <span>{myQty}</span>
-              <button onClick={inc} aria-label="Περισσότερα">
-                <Plus width={13} height={13} />
-              </button>
-            </span>
-            <button className="btn btn--primary" onClick={confirmOrder} disabled={!hasBasket}>
-              Επιβεβαίωση Παραγγελίας · {money(basketTotal)}
+          <span className="qty" style={{ margin: '0 auto' }}>
+            <button onClick={dec} aria-label="Λιγότερα" disabled={myQty === 0}>
+              <Minus width={13} height={13} />
             </button>
-          </>
+            <span>{myQty}</span>
+            <button onClick={inc} aria-label="Περισσότερα">
+              <Plus width={13} height={13} />
+            </button>
+          </span>
         ) : (
           <button className="btn" disabled>{item.unavailableNote}</button>
         )
