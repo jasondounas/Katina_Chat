@@ -14,11 +14,6 @@ import {
  * order_id that was ever seen with `ready: true`, and only call something
  * "served" once every approved item has gone through that ready → picked-up
  * cycle. `everReady` is a Set the caller keeps across polls.
- *
- * `relevantIds` scopes everything to only the orders THIS chat exchange
- * actually created — a table's session can accumulate many orders across
- * a whole meal, and older leftover ones (still pending, or long since
- * served) must never affect what this specific round shows the guest.
  */
 function computeOrderStage(orders, everReady, relevantIds) {
   const relevant = orders.filter((o) => relevantIds.has(o.order_id));
@@ -228,7 +223,9 @@ export function SessionProvider({ children, liveTableId = null }) {
       const draft = ref.current.drafts[id];
       dispatch({ type: 'CONFIRM_DRAFT', id });
       dispatch({ type: 'TICK', minutes: 1 });
-      say('Τέλεια — το έστειλα στην κουζίνα.', [{ type: 'order-status' }], 500);
+      // No new message here — the existing draft card (still on screen)
+      // switches itself into the live tracker once its status flips to
+      // 'confirmed', instead of opening a second card for the same order.
 
       if (sessionIdRef.current && draft) {
         everReadyRef.current.clear();
