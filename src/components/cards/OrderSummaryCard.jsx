@@ -1,8 +1,22 @@
-import { getItem, money } from '../../data/restaurant.js';
+import { getItem, money, orderStages } from '../../data/restaurant.js';
 import { useSession } from '../../engine/session.jsx';
-import { Plus, Minus, Check } from '../Icons.jsx';
+import { orderStageIndex } from '../../engine/state.js';
+import { Plus, Minus } from '../Icons.jsx';
 
-/** Η εκκρεμής παραγγελία. Τίποτα δεν φτάνει στην κουζίνα πριν την επιβεβαίωση. */
+const STAGE_NOTE = {
+  received: 'Η κουζίνα έχει το δελτίο σας',
+  preparing: 'Σύντομα στο πάσο',
+  ready: 'Η Μαρία τα παίρνει τώρα',
+  served: 'Όλα σερβιρίστηκαν',
+};
+
+/**
+ * Η εκκρεμής παραγγελία. Τίποτα δεν φτάνει στην κουζίνα πριν την επιβεβαίωση.
+ *
+ * Μόλις επιβεβαιωθεί, ΔΕΝ ανοίγει νέο μήνυμα με ξεχωριστή κάρτα παρακολούθησης
+ * — η ίδια κάρτα μετατρέπεται επιτόπου στον ζωντανό δείκτη προόδου, ώστε ο
+ * επισκέπτης να βλέπει μία κάρτα για κάθε παραγγελία, όχι δύο.
+ */
 export default function OrderSummaryCard({ id }) {
   const { state, api } = useSession();
   const draft = state.drafts[id];
@@ -11,6 +25,7 @@ export default function OrderSummaryCard({ id }) {
   const lines = draft.items.map((l) => ({ ...l, item: getItem(l.itemId) }));
   const total = lines.reduce((s, l) => s + l.item.price * l.qty, 0);
   const pending = draft.status === 'pending';
+  const confirmed = draft.status === 'confirmed';
 
   if (draft.status === 'cancelled') {
     return (
@@ -25,14 +40,20 @@ export default function OrderSummaryCard({ id }) {
     );
   }
 
+  const idx = confirmed ? orderStageIndex(state) : -1;
+  const stageEta = state.order.etaMin ?? 0;
+  const count = lines.reduce((s, l) => s + l.qty, 0);
+
   return (
     <div className="card">
       <div className="card__head">
         <span className="card__title">
           {pending ? 'Στην παραγγελία σας' : `Παραγγελία #${state.order.number}`}
         </span>
-        {!pending && (
-          <span className="eyebrow" style={{ color: 'var(--live)' }}>Στάλθηκε</span>
+        {confirmed && (
+          <span className="eyebrow" style={{ color: 'var(--live)' }}>
+            {STAGE_NOTE[state.order.stage] || 'Στάλθηκε'}
+          </span>
         )}
       </div>
 
@@ -64,15 +85,34 @@ export default function OrderSummaryCard({ id }) {
         </div>
       </div>
 
-      {pending ? (
+      {pending && (
         <div className="card__foot">
           <button className="btn btn--primary" onClick={() => api.confirmDraft(id)}>Επιβεβαίωση παραγγελίας</button>
           <button className="btn" onClick={() => api.send('Δείξε μου τον κατάλογο')}>Κάτι ακόμα</button>
         </div>
-      ) : (
-        <div className="card__foot" style={{ color: 'var(--text-3)', fontSize: 12, alignItems: 'center', gap: 8 }}>
-          <Check width={13} height={13} />
-          <span>Στάλθηκε στην κουζίνα στις {state.order.placedAt}</span>
+      )}
+
+      {confirmed && (
+        <div style={{ padding: '4px 18px 18px' }}>
+          <div className="steps">
+            {orderStages.map((stage, i) => (
+              <div
+                key={stage.id}
+                className={`step ${i < idx ? 'step--done' : ''} ${i === idx ? 'step--now' : ''}`}
+              >
+                <span className="step__bar" />
+                <span className="step__dot" />
+                <span className="step__label">{stage.label}</span>
+              </div>
+            ))}
+          </div>
+          <div className="eta">
+            <span>{count} είδη</span>
+            {state.order.stage === 'preparing' && <span>απομένουν <b>{stageEta}–{stageEta + 2} λεπτά</b></span>}
+            {state.order.stage === 'received' && <span>Εκτίμηση <b>{stageEta} λεπτά</b></span>}
+            {state.order.stage === 'ready' && <span><b>Φεύγει από το πάσο</b></span>}
+            {state.order.stage === 'served' && <span>Ολοκληρώθηκε</span>}
+          </div>
         </div>
       )}
     </div>
