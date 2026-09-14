@@ -1,12 +1,3 @@
-/**
- * Thin wrapper around the real KatinaBot backend (main.py on Render).
- *
- * This is the ONLY file that knows the backend's URLs and shapes. Everything
- * else in the app talks to `session.jsx`, which decides what to do with the
- * responses. CORS on the backend already allows any origin, so this works
- * from `npm run dev` on localhost with zero backend changes.
- */
-
 export const API_BASE = 'https://katina-bot.onrender.com';
 
 async function asJson(res) {
@@ -30,13 +21,19 @@ export function fetchSessionOrders(sessionId) {
   return fetch(`${API_BASE}/sessions/${encodeURIComponent(sessionId)}/orders`).then(asJson);
 }
 
-export function submitOrder(sessionId, itemId, qty, note = '') {
+/** One basket line → one row in `orders` → one kitchen ticket.
+ *  `extras` carries the free removals at price 0 (the column was built for
+ *  paid add-ons). `idempotency_key` is the lineId, so a retry can't double. */
+export function submitOrder(sessionId, itemId, qty, opts = {}) {
+  const { note = '', extras = [], idempotencyKey } = opts;
   const params = new URLSearchParams({
     session_id: sessionId,
     item: itemId,
     qty: String(qty),
     note,
+    extras: JSON.stringify(extras),
   });
+  if (idempotencyKey) params.set('idempotency_key', idempotencyKey);
   return fetch(`${API_BASE}/orders?${params.toString()}`, { method: 'POST' }).then(asJson);
 }
 
