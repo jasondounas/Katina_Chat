@@ -34,7 +34,7 @@ const SessionContext = createContext(null);
 export const useSession = () => useContext(SessionContext);
 
 /** Μοιάζει με σύνθεση πρότασης, όχι με spinner. */
-const thinkTime = (text) => Math.min(1500, 480 + text.length * 7);
+const thinkTime = (text) => Math.min(1500, 480 + text.length * 7); const SEND_DELAY = 5000;
 
 export function SessionProvider({ children, liveTableId = null }) {
   const [state, dispatch] = useReducer(
@@ -45,6 +45,7 @@ export function SessionProvider({ children, liveTableId = null }) {
   const ref = useRef(state);
   useEffect(() => { ref.current = state; });
   const timers = useRef([]);
+    const sendTimerRef = useRef(null);
 
   // --- live mode: real menu + real session on the real backend ---
   const sessionIdRef = useRef(null);
@@ -206,7 +207,11 @@ export function SessionProvider({ children, liveTableId = null }) {
       say('Ορίστε το τραπέζι όπως το έχω. Τίποτα δεν φεύγει για την κουζίνα πριν το επιβεβαιώσετε.', [{ type: 'draft', id }], 420);
     },
 
-    draftQty: (id, itemId, delta) => dispatch({ type: 'DRAFT_QTY', id, itemId, delta }),
+        draftQty: (id, lineId, delta) => dispatch({ type: 'DRAFT_QTY', id, lineId, delta }),
+    forkLine: (id, lineId) => dispatch({ type: 'FORK_LINE', id, lineId }),
+    toggleMod: (id, lineId, mod) => dispatch({ type: 'TOGGLE_MOD', id, lineId, mod }),
+    lineNote: (id, lineId, note) => dispatch({ type: 'LINE_NOTE', id, lineId, note }),
+    draftNote: (note) => dispatch({ type: 'DRAFT_NOTE', note }),
 
     cancelDraft: (id) => {
       dispatch({ type: 'CANCEL_DRAFT', id });
@@ -219,30 +224,45 @@ export function SessionProvider({ children, liveTableId = null }) {
       }], 380);
     },
 
-    confirmDraft: (id) => {
-      const draft = ref.current.drafts[id];
-      dispatch({ type: 'CONFIRM_DRAFT', id });
+        confirmDraft: (id) => {
+      const endsAt = Date.now() + SEND_DELAY;
+      dispatch({ type: 'CONFIRM_DRAFT', id, endsAt });
+      dispatch({ type: 'CLOSE_SHEET' });
       dispatch({ type: 'TICK', minutes: 1 });
-      // No new message here — the existing draft card (still on screen)
-      // switches itself into the live tracker once its status flips to
-      // 'confirmed', instead of opening a second card for the same order.
+      sendTimerRef.current = setTimeout(() => api.commitSend(), SEND_DELAY);
+    },
 
-      if (sessionIdRef.current && draft) {
-        everReadyRef.current.clear();
-        currentOrderIdsRef.current = new Set();
-        // Real order → real backend. The poller above picks up its real
-        // status (pending review → approved → ready → picked up) from here,
-        // scoped to only the order_ids this round actually created — not
-        // every order this table has ever placed.
-        draft.items.forEach((line) => {
-          submitOrder(sessionIdRef.current, line.itemId, line.qty)
-            .then((res) => { if (res && res.order_id) currentOrderIdsRef.current.add(res.order_id); })
-            .catch(() => {});
-        });
-      } else {
-        // Demo mode, no real session — fake the kitchen picking it up.
+    undoSend: () => {
+      clearTimeout(sendTimerRef.current);
+      sendTimerRef.current = null;
+      dispatch({ type: 'UNDO_SEND' });
+      dispatch({ type: 'OPEN_SHEET', sheet: 'cart' });
+    },
+
+    /** The undo window closed. One POST per basket line. */
+    commitSend: () => {
+      const pending = ref.current.pending;
+      if (!pending) return;
+      sendTimerRef.current = null;
+      dispatch({ type: 'COMMIT_SEND' });
+
+      if (!sessionIdRef.current) {
         later(() => dispatch({ type: 'ADVANCE_ORDER', stage: 'preparing' }), 7000);
+        return;
       }
+
+      everReadyRef.current.clear();
+      currentOrderIdsRef.current = new Set();
+
+      pending.items.forEach((line) => {
+        submitOrder(sessionIdRef.current, line.itemId, line.qty, {
+          note: [line.note, pending.note].filter(Boolean).join(' · '),
+          extras: line.mods.map((name) => ({ name, price: 0 })),
+          idempotencyKey: line.lineId,
+        })
+          .then((res) => { if (res && res.order_id) currentOrderIdsRef.current.add(res.order_id); })
+          .catch(() => {});
+      });
     },
 
     advanceOrder: () => dispatch({ type: 'ADVANCE_ORDER' }),
