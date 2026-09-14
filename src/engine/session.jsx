@@ -185,20 +185,21 @@ export function SessionProvider({ children, liveTableId = null }) {
      * basket instead of spawning a new draft and a new chat message each
      * time. `state.basketId` is real reducer state, so the menu card and
      * the sticky basket bar both see quantities update live. */
-    addItem: (itemId, qty = 1) => {
+        addItem: (itemId, qty = 1) => {
       const basketId = ref.current.basketId;
-      const openDraft = basketId ? ref.current.drafts[basketId] : null;
+      const openBasket = basketId ? ref.current.drafts[basketId] : null;
 
-      if (openDraft && openDraft.status === 'pending') {
+      if (openBasket && openBasket.status === 'pending') {
         dispatch({ type: 'ADD_TO_DRAFT', id: basketId, itemId, qty });
         dispatch({ type: 'TICK', minutes: 1 });
         return;
       }
 
+      // Καμία ατάκα εδώ. Το καλάθι ζει στο μπαρ, όχι στη συνομιλία —
+      // αλλιώς κάθε προσθήκη σπρώχνει το thread και κουνάει η οθόνη.
       const id = `d-${Date.now()}`;
       dispatch({ type: 'CREATE_DRAFT', id, items: [{ itemId, qty }] });
       dispatch({ type: 'TICK', minutes: 1 });
-      say('Ξεκίνησα το καλάθι σας — προσθέστε ό,τι άλλο θέλετε, μετά επιβεβαιώστε.', [{ type: 'draft', id }], 420);
     },
 
     draftFromItems: (items) => {
