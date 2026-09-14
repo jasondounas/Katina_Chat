@@ -1,0 +1,156 @@
+/* ------------------------------------------------------------------
+   Ordering flow — catalog sheet, cart sheet, undo bar.
+
+   Additive only: kept out of app.css so nothing existing shifts, and
+   built entirely from the tokens already in tokens.css.
+   ------------------------------------------------------------------ */
+
+/* ---------- shared pill ---------- */
+.pill {
+  border: 1px solid var(--line-mid);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  background: var(--surface);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pill:hover { border-color: var(--line-strong); }
+.pill--sm { padding: 5.5px 12px; font-size: 11.5px; }
+.pill--ghost { color: var(--accent); border-color: var(--accent-line); }
+.pill[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+/* ---------- catalog ---------- */
+.catalog__tools { padding: 2px 0 0; }
+.catalog__search {
+  width: 100%;
+  border: 1px solid var(--line-mid);
+  border-radius: 999px;
+  padding: 11px 16px;
+  font: inherit;
+  font-size: 13.5px;
+  background: var(--surface);
+  color: var(--text);
+}
+.catalog__search::placeholder { color: var(--text-4); }
+.catalog__filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 0 0; }
+
+/* Category chips: anchors into the one list, not a view switcher. */
+.catalog__jump {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 10px 0 11px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 2;
+}
+.catalog__jump::-webkit-scrollbar { display: none; }
+
+.catalog__section {
+  padding: 15px 0 5px;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  background: var(--surface);
+  position: sticky;
+  top: 42px;
+  z-index: 1;
+}
+.catalog__empty { padding: 32px 0; text-align: center; color: var(--text-4); font-size: 13.5px; }
+
+.crow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+.crow__body { flex: 1; min-width: 0; }
+.crow__name { font-family: var(--display, Georgia, serif); font-size: 16px; line-height: 1.2; }
+.crow__price { font-size: 12.5px; color: var(--text-3); margin-top: 3px; }
+.crow__meta { font-size: 11px; color: var(--text-4); margin-top: 3px; }
+.crow__qty { font-size: 12px; color: var(--accent); min-width: 14px; text-align: right; }
+.crow__add {
+  width: 34px; height: 34px; border-radius: 50%; flex: none; border: none;
+  background: var(--accent); color: var(--on-accent);
+  display: grid; place-items: center; cursor: pointer;
+}
+.crow__add:hover { background: var(--accent-hover); }
+.crow__add:disabled {
+  background: var(--surface-3); color: var(--text-4); cursor: not-allowed;
+}
+
+/* ---------- basket bar, inside the catalog's pinned footer ---------- */
+.basketbar {
+  width: 100%; border: none; cursor: pointer;
+  background: var(--accent); color: var(--on-accent);
+  border-radius: 999px; padding: 13px 16px;
+  display: flex; align-items: center; gap: 11px;
+  font: inherit; font-size: 14px;
+}
+.basketbar:hover { background: var(--accent-hover); }
+.basketbar__n {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  display: grid; place-items: center; font-size: 12px; flex: none;
+}
+.basketbar__total { margin-left: auto; }
+
+/* ---------- cart ---------- */
+.sheet__back { margin-right: 2px; font-size: 17px; line-height: 1; }
+
+.cartline { padding: 13px 0; border-bottom: 1px solid var(--line); }
+.cartline__top { display: flex; align-items: flex-start; gap: 12px; }
+.cartline__body { flex: 1; min-width: 0; }
+.cartline__name { font-family: var(--display, Georgia, serif); font-size: 16px; line-height: 1.2; }
+.cartline__price { font-size: 12.5px; color: var(--text-3); margin-top: 3px; }
+.cartline__diet {
+  margin-top: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.cartline__contains { font-size: 11px; color: var(--text-4); }
+.cartline__mods { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.cartline__note {
+  width: 100%; margin-top: 8px;
+  border: 1px solid var(--line-mid); border-radius: 9px;
+  padding: 8px 11px; font: inherit; font-size: 12.5px; resize: none;
+  background: var(--surface); color: var(--text);
+}
+
+.cart__note {
+  width: 100%;
+  border: 1px solid var(--line-mid); border-radius: 9px;
+  padding: 11px 13px; font: inherit; font-size: 13px; resize: none;
+  background: var(--surface); color: var(--text);
+  margin-bottom: 10px;
+}
+.cart__confirm { width: 100%; }
+.cart__reassure {
+  margin: 9px 0 0; text-align: center; font-size: 11.5px; color: var(--text-4);
+}
+
+/* ---------- undo bar ---------- */
+.undobar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px;
+  background: rgba(158, 63, 31, 0.07);
+  border-top: 1px solid var(--warn-line);
+  border-bottom: 1px solid var(--warn-line);
+  font-size: 12.5px; color: var(--warn);
+}
+.undobar__text { flex: 1; }
+.undobar__btn {
+  border: 1px solid var(--warn-line); border-radius: 999px;
+  padding: 4px 12px; font: inherit; font-size: 12px;
+  color: var(--warn); background: var(--surface); cursor: pointer;
+}
