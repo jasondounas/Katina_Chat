@@ -255,15 +255,22 @@ export function SessionProvider({ children, liveTableId = null }) {
       everReadyRef.current.clear();
       currentOrderIdsRef.current = new Set();
 
-      pending.items.forEach((line) => {
-        submitOrder(sessionIdRef.current, line.itemId, line.qty, {
-          note: [line.note, pending.note].filter(Boolean).join(' · '),
-          extras: line.mods.map((name) => ({ name, price: 0 })),
-          idempotencyKey: line.lineId,
-        })
-          .then((res) => { if (res && res.order_id) currentOrderIdsRef.current.add(res.order_id); })
-          .catch(() => {});
-      });
+      (async () => {
+        // Σειριακά, όχι παράλληλα: τρία ταυτόχρονα POST στο ίδιο session
+        // πατάνε το ένα το άλλο και μόνο το τελευταίο επιβιώνει.
+        for (const line of pending.items) {
+          try {
+            const res = await submitOrder(sessionIdRef.current, line.itemId, line.qty, {
+              note: [line.note, pending.note].filter(Boolean).join(' · '),
+              extras: line.mods.map((name) => ({ name, price: 0 })),
+              idempotencyKey: line.lineId,
+            });
+            if (res && res.order_id) currentOrderIdsRef.current.add(res.order_id);
+          } catch (err) {
+            console.error('order line failed', line.itemId, err);
+          }
+        }
+      })();
     },
 
     advanceOrder: () => dispatch({ type: 'ADVANCE_ORDER' }),
