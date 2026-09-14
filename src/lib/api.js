@@ -33,7 +33,7 @@ export function submitOrder(sessionId, itemId, qty, opts = {}) {
     note,
     extras: JSON.stringify(extras),
   });
-  if (idempotencyKey) params.set('idempotency_key', idempotencyKey);
+ // if (idempotencyKey) params.set('idempotency_key', idempotencyKey);
   return fetch(`${API_BASE}/orders?${params.toString()}`, { method: 'POST' }).then(asJson);
 }
 
