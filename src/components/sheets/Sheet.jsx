@@ -2,8 +2,10 @@ import { useEffect } from 'react';
 import { useSession } from '../../engine/session.jsx';
 import { Close } from '../Icons.jsx';
 
-/** Κοινό κέλυφος bottom sheet: σκίαση, λαβή, τίτλος, καρφιτσωμένο υποσέλιδο. */
-export default function Sheet({ title, eyebrow, children, footer, onClose }) {
+/** Κοινό κέλυφος bottom sheet: σκίαση, λαβή, τίτλος, καρφιτσωμένο υποσέλιδο.
+ *  `back` adds a left arrow that returns somewhere instead of dismissing —
+ *  the catalog/cart pair uses it so browsing is never actually closed. */
+export default function Sheet({ title, eyebrow, children, footer, onClose, back }) {
   const { api } = useSession();
   const close = onClose ?? api.closeSheet;
 
@@ -19,6 +21,11 @@ export default function Sheet({ title, eyebrow, children, footer, onClose }) {
       <div className="sheet" role="dialog" aria-modal="true" aria-label={title}>
         <div className="sheet__grab" />
         <div className="sheet__head">
+          {back && (
+            <button className="iconbtn sheet__back" onClick={back} aria-label="Πίσω στον κατάλογο">
+              ←
+            </button>
+          )}
           <div>
             {eyebrow && <div className="eyebrow" style={{ marginBottom: 4 }}>{eyebrow}</div>}
             <div className="sheet__title">{title}</div>
