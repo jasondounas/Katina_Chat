@@ -8,7 +8,7 @@ import { getCategory, itemsIn, getItem, money, modifiers as modDefs } from '../.
 import { Plus, Minus } from '../Icons.jsx';
 
 /** Μια ολόκληρη κατηγορία, χωρίς να φύγετε από τη συνομιλία. Καθαρά
- * περιήγηση/προσθήκη — η αποστολή γίνεται μόνο από το μπαρ καλαθιού. */
+ * περιήγηση/προσθήκη — η αποστολή γίνεται μόνο από το καλάθι. */
 export function CategorySheet({ payload }) {
   const category = getCategory(payload.categoryId);
   const items = itemsIn(category.id);
@@ -26,9 +26,7 @@ export function CategorySheet({ payload }) {
 }
 
 /** Ένα πιάτο, αναλυτικά — το μόνο σημείο όπου το πιάτο δείχνεται μεγάλο.
- * Μόνο περιήγηση/προσθήκη εδώ επίσης — η αποστολή γίνεται από το μπαρ
- * καλαθιού, ώστε να μπορείτε να προσθέσετε από πολλές κατηγορίες πριν
- * στείλετε μία φορά. */
+ * Μόνο περιήγηση/προσθήκη εδώ επίσης. */
 export function ItemSheet({ payload }) {
   const { state, api } = useSession();
   const item = getItem(payload.itemId);
@@ -36,10 +34,20 @@ export function ItemSheet({ payload }) {
 
   const available = item.available;
   const draft = state.basketId ? state.drafts[state.basketId] : null;
-  const myQty = draft?.items.find((l) => l.itemId === item.id)?.qty || 0;
+  const lines = draft?.items ?? [];
+
+  const myQty = lines
+    .filter((l) => l.itemId === item.id)
+    .reduce((n, l) => n + l.qty, 0);
+
+  const plain = lines.find(
+    (l) => l.itemId === item.id && !l.mods.length && !l.note,
+  );
 
   const inc = () => api.addItem(item.id, 1);
-  const dec = () => { if (state.basketId) api.draftQty(state.basketId, item.id, -1); };
+  const dec = () => {
+    if (plain) api.draftQty(state.basketId, plain.lineId, -1);
+  };
 
   return (
     <Sheet
@@ -48,7 +56,7 @@ export function ItemSheet({ payload }) {
       footer={
         available ? (
           <span className="qty" style={{ margin: '0 auto' }}>
-            <button onClick={dec} aria-label="Λιγότερα" disabled={myQty === 0}>
+            <button onClick={dec} aria-label="Λιγότερα" disabled={!plain}>
               <Minus width={13} height={13} />
             </button>
             <span>{myQty}</span>

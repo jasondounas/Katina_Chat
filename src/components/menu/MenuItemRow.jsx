@@ -7,10 +7,21 @@ import { Plus, Minus } from '../Icons.jsx';
 export default function MenuItemRow({ item, highlight }) {
   const { state, api } = useSession();
   const draft = state.basketId ? state.drafts[state.basketId] : null;
-  const qty = draft?.items.find((l) => l.itemId === item.id)?.qty || 0;
+  const lines = draft?.items ?? [];
+
+  // Όλες οι γραμμές του πιάτου μαζί — αυτό περιμένει να δει ο επισκέπτης.
+  const qty = lines
+    .filter((l) => l.itemId === item.id)
+    .reduce((n, l) => n + l.qty, 0);
+
+  // Το μείον αφαιρεί μόνο από τη γραμμή χωρίς αλλαγές: μια γραμμή που ο
+  // επισκέπτης έχει τροποποιήσει στο καλάθι δεν πειράζεται από εδώ.
+  const plain = lines.find(
+    (l) => l.itemId === item.id && !l.mods.length && !l.note,
+  );
 
   const inc = () => api.addItem(item.id, 1);
-  const dec = () => { if (state.basketId) api.draftQty(state.basketId, item.id, -1); };
+  const dec = () => { if (plain) api.draftQty(state.basketId, plain.lineId, -1); };
 
   return (
     <div className="row">
@@ -32,7 +43,7 @@ export default function MenuItemRow({ item, highlight }) {
       </button>
       {qty > 0 ? (
         <span className="qty">
-          <button onClick={dec} aria-label={`Ένα λιγότερο: ${item.name}`}>
+          <button onClick={dec} aria-label={`Ένα λιγότερο: ${item.name}`} disabled={!plain}>
             <Minus width={12} height={12} />
           </button>
           <span>{qty}</span>
