@@ -7,6 +7,7 @@ import ChatComposer from './components/ChatComposer.jsx';
 import SheetHost from './components/SheetHost.jsx';
 import DemoScenarioSwitcher from './components/DemoScenarioSwitcher.jsx';
 import { restaurant, table, platform } from './data/restaurant.js';
+import UndoBar from './components/UndoBar.jsx';
 
 // Same idea as customer.html: `?table=T-1` on the URL means "this is a real
 // guest at a real table on the real backend," not the scripted demo.
@@ -47,6 +48,7 @@ export default function App() {
             <MobileShell>
               <div className="app">
                 <RestaurantHeader />
+                <UndoBar />
                 <Conversation />
                 <BasketBar />
                 <ChatComposer />
