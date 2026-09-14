@@ -14,7 +14,7 @@ export default function SheetHost() {
     case 'payment': return <PaymentSheet payload={payload} />;
     case 'split': return <SplitBillSheet />;
     case 'catalog': return <CatalogSheet />;
-    case 'category': return <CategorySheet payload={payload} />;
+   case 'category': return <CatalogSheet />;
     case 'item': return <ItemSheet payload={payload} />;
     case 'cart': return <CartSheet />;
     default: return null;
